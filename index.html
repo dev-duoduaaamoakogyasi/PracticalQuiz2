@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Practical Quiz 1</title>
+  <script src="aframe.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Georgia', serif; }
+
+    #hud {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 10px; align-items: center; z-index: 100; pointer-events: none;
+    }
+    .hud-pill {
+      background: rgba(0,0,0,0.50); backdrop-filter: blur(6px);
+      color: #fff; font-size: 13px; padding: 7px 18px; border-radius: 30px;
+      letter-spacing: 0.04em; white-space: nowrap; border: 1px solid rgba(255,255,255,0.15);
+    }
+    .hud-pill kbd {
+      background: rgba(255,255,255,0.18); border-radius: 4px;
+      padding: 1px 5px; font-size: 11px; font-family: monospace;
+    }
+    #tooltip {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -120px);
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
+      color: #fff; padding: 10px 22px; border-radius: 16px; font-size: 15px;
+      border: 1px solid rgba(255,255,255,0.2); pointer-events: none;
+      opacity: 0; transition: opacity 0.3s; z-index: 120; text-align: center;
+    }
+    #tooltip.show { opacity: 1; }
+    #joystick-wrap {
+      position: fixed; bottom: 80px; left: 30px; z-index: 110;
+      display: none; touch-action: none;
+    }
+    @media (pointer: coarse) { #joystick-wrap { display: block; } }
+    #joystick-base {
+      width: 110px; height: 110px; border-radius: 50%;
+      background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+      position: relative;
+    }
+    #joystick-knob {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,255,255,0.55); position: absolute;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+
+
+<div id="tooltip"></div>
+<div id="joystick-wrap">
+  <div id="joystick-base"><div id="joystick-knob"></div></div>
+</div>
+
+<a-scene fog="type: linear; color: #c9ecf7; near: 20; far: 45">
+
+  <!-- SKY -->
+  <a-sky color="#87CEEB"></a-sky>
+
+  <!-- SUN -->
+  <a-sphere position="12 18 -20" radius="1.8" material="shader:flat; color:#FFF9C4"></a-sphere>
+  <a-sphere position="12 18 -20" radius="2.8" material="shader:flat; color:#FFE87C; opacity:0.15"></a-sphere>
+
+  <!-- LIGHTING -->
+  <a-light type="ambient"     color="#d8eef5" intensity="0.75"></a-light>
+  <a-light type="directional" color="#fff8e1" intensity="1.2" position="8 14 -6" cast-shadow="true"></a-light>
+  <a-light type="point"       color="#fffae8" intensity="0.4" distance="12" position="0 3 0"></a-light>
+
+  <!-- GROUND -->
+  <a-plane position="0 0 0"      rotation="-90 0 0" width="70" height="70" material="color:#4a8c3f; roughness:1.0; metalness:0"></a-plane>
+  <a-plane position="5 0.01 4"   rotation="-90 0 0" width="9"  height="9"  material="color:#52964a; opacity:0.55"></a-plane>
+  <a-plane position="-6 0.01 -4" rotation="-90 0 0" width="11" height="11" material="color:#3e7a35; opacity:0.50"></a-plane>
+  <a-plane position="3 0.01 -9"  rotation="-90 0 0" width="7"  height="7"  material="color:#5aa050; opacity:0.45"></a-plane>
+
+  <!-- STONE PATH -->
+  <a-box position="0    0.02 9"  width="1.05" height="0.06" depth="0.72" material="color:#b0a090; roughness:1"></a-box>
+  <a-box position="0.15 0.02 8"  width="0.95" height="0.06" depth="0.76" material="color:#a89880; roughness:1"></a-box>
+  <a-box position="-0.1 0.02 7"  width="1.05" height="0.06" depth="0.72" material="color:#b5a898; roughness:1"></a-box>
+  <a-box position="0.1  0.02 6"  width="1.00" height="0.06" depth="0.74" material="color:#a8987e; roughness:1"></a-box>
+  <a-box position="-0.05 0.02 5" width="1.05" height="0.06" depth="0.72" material="color:#b2a28a; roughness:1"></a-box>
+  <a-box position="0.1  0.02 4"  width="0.95" height="0.06" depth="0.72" material="color:#aaa090; roughness:1"></a-box>
+  <a-box position="-0.1 0.02 3"  width="1.05" height="0.06" depth="0.70" material="color:#b0a280; roughness:1"></a-box>
+  <a-box position="0    0.02 2"  width="1.00" height="0.06" depth="0.74" material="color:#a89a80; roughness:1"></a-box>
+  <a-plane position="-0.9 0.01 5.5" rotation="-90 0 0" width="0.3" height="9" material="color:#3d7835; opacity:0.8"></a-plane>
+  <a-plane position=" 0.9 0.01 5.5" rotation="-90 0 0" width="0.3" height="9" material="color:#3d7835; opacity:0.8"></a-plane>
+
+  <!-- TEAK TABLE -->
+  <a-box position="0 0.82 0" width="1.5" height="0.055" depth="0.85" material="color:#b5884a; roughness:0.9; metalness:0"></a-box>
+  <a-box position="0 0.855  0"     width="1.38" height="0.03" depth="0.090" material="color:#c9964f; roughness:0.9"></a-box>
+  <a-box position="0 0.855  0.115" width="1.38" height="0.03" depth="0.090" material="color:#bf8d47; roughness:0.9"></a-box>
+  <a-box position="0 0.855 -0.115" width="1.38" height="0.03" depth="0.090" material="color:#c9964f; roughness:0.9"></a-box>
+  <a-box position="0 0.855  0.23"  width="1.38" height="0.03" depth="0.090" material="color:#bf8d47; roughness:0.9"></a-box>
+  <a-box position="0 0.855 -0.23"  width="1.38" height="0.03" depth="0.090" material="color:#c9964f; roughness:0.9"></a-box>
+  <a-box position="0 0.855  0.345" width="1.38" height="0.03" depth="0.085" material="color:#bf8d47; roughness:0.9"></a-box>
+  <a-box position="0 0.855 -0.345" width="1.38" height="0.03" depth="0.085" material="color:#c9964f; roughness:0.9"></a-box>
+  <a-box position="-0.6 0.41 0" width="0.045" height="0.84" depth="0.045" rotation="0 0  18" material="color:#a07030; roughness:0.9"></a-box>
+  <a-box position="-0.6 0.41 0" width="0.045" height="0.84" depth="0.045" rotation="0 0 -18" material="color:#b07838; roughness:0.9"></a-box>
+  <a-box position=" 0.6 0.41 0" width="0.045" height="0.84" depth="0.045" rotation="0 0  18" material="color:#a07030; roughness:0.9"></a-box>
+  <a-box position=" 0.6 0.41 0" width="0.045" height="0.84" depth="0.045" rotation="0 0 -18" material="color:#b07838; roughness:0.9"></a-box>
+  <a-box position="0 0.38 0" width="1.1" height="0.04" depth="0.04" material="color:#a07030; roughness:0.9"></a-box>
+
+  <!-- MILO TIN -->
+  <a-cylinder position="-0.35 0.920 -0.15" radius="0.070" height="0.190" material="color:#2d6a2d; roughness:0.5; metalness:0.2"></a-cylinder>
+  <a-cylinder position="-0.35 0.915 -0.15" radius="0.072" height="0.120" material="color:#3a8c3a; roughness:0.4"></a-cylinder>
+  <a-cylinder position="-0.35 0.915 -0.15" radius="0.073" height="0.060" material="color:#e8f5e8; roughness:0.4"></a-cylinder>
+  <a-cylinder position="-0.35 1.005 -0.15" radius="0.073" height="0.025" material="color:#1a4d1a; roughness:0.3; metalness:0.4"></a-cylinder>
+
+  <!-- MILK TIN -->
+  <a-cylinder position="0.35 0.920 -0.15"  radius="0.065" height="0.170" material="color:#f5f5f5; roughness:0.3; metalness:0.4"></a-cylinder>
+  <a-cylinder position="0.35 0.915 -0.15"  radius="0.067" height="0.090" material="color:#1565c0; roughness:0.3"></a-cylinder>
+  <a-cylinder position="0.35 0.920 -0.15"  radius="0.068" height="0.040" material="color:#e3f2fd; roughness:0.3"></a-cylinder>
+  <a-cylinder position="0.35 0.995 -0.15"  radius="0.068" height="0.022" material="color:#dddddd; roughness:0.2; metalness:0.6"></a-cylinder>
+
+  <!-- CUP 1 -->
+ <!-- Cup -->
+<a-cylinder position="-0.15 0.890 0.2" radius="0.055" height="0.100" material="color:#ffffff; roughness:0.2"></a-cylinder>
+
+<!-- Top rim -->
+<a-cylinder position="-0.15 0.890 0.2" radius="0.045" height="0.110" material="color:#5C4033; roughness:0.2"></a-cylinder> 
+
+<!-- Handle (properly attached to side) -->
+<a-torus position="-0.095 0.890 0.2" radius="0.028" radius-tubular="0.005" rotation="0 0 90" material="color:#e8e8e8; roughness:0.2"></a-torus>
+
+<!-- Base plate / saucer -->
+<a-cylinder position="-0.15 0.856 0.2" radius="0.085" height="0.030" material="color:#f9f9f9; roughness:0.2"></a-cylinder>
+
+
+
+
+  <!-- Cup 2-->
+<a-cylinder position="0.15 0.890 0.2" radius="0.055" height="0.100" material="color:#ffffff; roughness:0.2"></a-cylinder>
+
+<!-- Top rim -->
+<a-cylinder position="0.15 0.890 0.2" radius="0.045" height="0.110" material="color:#5C4033; roughness:0.2"></a-cylinder> 
+
+<!-- Handle (properly attached to side) -->
+<a-torus position="0.095 0.890 0.2" radius="0.028" radius-tubular="0.005" rotation="0 0 90" material="color:#e8e8e8; roughness:0.2"></a-torus>
+
+<!-- Base plate / saucer -->
+<a-cylinder position="0.15 0.856 0.2" radius="0.085" height="0.030" material="color:#f9f9f9; roughness:0.2"></a-cylinder>
+
+
+
+  <!-- SPOONS & BISCUIT PLATE -->
+ <!-- Spoon Handle -->
+<a-box position="0.53 0.88 0" width="0.02" height="0.005" depth="0.12" material="color:white; metalness:0.2; roughness:0.5"></a-box>
+
+<!-- Spoon Head -->
+<a-cylinder position="-0.53 0.88 0.12" radius="0.03" height="0.006" rotation="0 90 0" material="color:white; metalness:0.2; roughness:0.5"></a-cylinder>
+<!-- Spoon Handle -->
+<a-box position="-0.53 0.88 0" width="0.02" height="0.005" depth="0.12" material="color:white; metalness:0.2; roughness:0.5"></a-box>
+
+<!-- Spoon Head -->
+<a-cylinder position="0.53 0.88 0.12" radius="0.03" height="0.006" rotation="0 90 0" material="color:white; metalness:0.2; roughness:0.5"></a-cylinder>
+
+
+
+<!-- Plate 1 (slightly smaller, stacked) -->
+<a-cylinder position="-0.40 0.855 0.05" radius="0.10" height="0.048" material="color:#e0d8c3; roughness:0.4"></a-cylinder>
+
+<!-- biscuits -->
+<a-cylinder position="-0.40 0.855 0.05" radius="0.040" height="0.050" material="color:#8B4513; roughness:0.3"></a-cylinder>
+
+
+
+<!-- Plate 2 (slightly smaller, stacked) -->
+<a-cylinder position="0.40 0.855 0.05" radius="0.10" height="0.048" material="color:#e0d8c3; roughness:0.4"></a-cylinder>
+
+
+<!-- biscuits -->
+<a-cylinder position="0.40 0.855 0.05" radius="0.040" height="0.050" material="color:#8B4513; roughness:0.3"></a-cylinder>
+
+
+
+  <!-- TEAK CHAIR 1 — LEFT -->
+  <a-entity position="-1.05 0 0" rotation="0 90 0">
+    <a-box position="0 0.470 0"      width="0.48" height="0.040" depth="0.44"  material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498 -0.145" width="0.44" height="0.026" depth="0.078" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498 -0.048" width="0.44" height="0.026" depth="0.078" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498  0.048" width="0.44" height="0.026" depth="0.078" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498  0.145" width="0.44" height="0.026" depth="0.078" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.580 -0.2" width="0.042" height="1.16" depth="0.042" rotation="0 0  1" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.580 -0.2" width="0.042" height="1.16" depth="0.042" rotation="0 0 -1" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 1.090 -0.19"  width="0.47" height="0.048" depth="0.042" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.820 -0.19"  width="0.47" height="0.035" depth="0.035" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.990 -0.19"  width="0.38" height="0.038" depth="0.028" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.920 -0.19"  width="0.38" height="0.038" depth="0.028" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.235  0.19" width="0.042" height="0.47" depth="0.042" rotation="0 0  3" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.235  0.19" width="0.042" height="0.47" depth="0.042" rotation="0 0 -3" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.235 -0.19" width="0.042" height="0.47" depth="0.042" rotation="4 0  3" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.235 -0.19" width="0.042" height="0.47" depth="0.042" rotation="4 0 -3" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0    0.28  0.19" width="0.40" height="0.032" depth="0.032" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0    0.28 -0.19" width="0.40" height="0.032" depth="0.032" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.28 0"   width="0.032" height="0.032" depth="0.38" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.28 0"   width="0.032" height="0.032" depth="0.38" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+  </a-entity>
+
+  <!-- TEAK CHAIR 2 — RIGHT -->
+  <a-entity position="1.05 0 0" rotation="0 -90 0">
+    <a-box position="0 0.470 0"      width="0.48" height="0.040" depth="0.44"  material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498 -0.145" width="0.44" height="0.026" depth="0.078" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498 -0.048" width="0.44" height="0.026" depth="0.078" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498  0.048" width="0.44" height="0.026" depth="0.078" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.498  0.145" width="0.44" height="0.026" depth="0.078" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.580 -0.2" width="0.042" height="1.16" depth="0.042" rotation="0 0  1" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.580 -0.2" width="0.042" height="1.16" depth="0.042" rotation="0 0 -1" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 1.090 -0.19"  width="0.47" height="0.048" depth="0.042" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.820 -0.19"  width="0.47" height="0.035" depth="0.035" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.990 -0.19"  width="0.38" height="0.038" depth="0.028" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0 0.920 -0.19"  width="0.38" height="0.038" depth="0.028" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.235  0.19" width="0.042" height="0.47" depth="0.042" rotation="0 0  3" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.235  0.19" width="0.042" height="0.47" depth="0.042" rotation="0 0 -3" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.235 -0.19" width="0.042" height="0.47" depth="0.042" rotation="4 0  3" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.235 -0.19" width="0.042" height="0.47" depth="0.042" rotation="4 0 -3" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0    0.28  0.19" width="0.40" height="0.032" depth="0.032" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position="0    0.28 -0.19" width="0.40" height="0.032" depth="0.032" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+    <a-box position="-0.21 0.28 0"   width="0.032" height="0.032" depth="0.38" material="color:#c9964f; roughness:0.92; metalness:0"></a-box>
+    <a-box position=" 0.21 0.28 0"   width="0.032" height="0.032" depth="0.38" material="color:#b5844a; roughness:0.92; metalness:0"></a-box>
+  </a-entity>
+
+  <!-- CANTILEVER UMBRELLA -->
+  <a-box      position="-2.6 0.12 0.3"  width="0.55" height="0.24" depth="0.55" material="color:#555555; metalness:0.5; roughness:0.5"></a-box>
+  <a-cylinder position="-2.6 1.40 0.3"  radius="0.04" height="2.8" material="color:#444444; metalness:0.7; roughness:0.2"></a-cylinder>
+  <a-box      position="-1.1 2.78 0.3"  width="3.1" height="0.05" depth="0.05" material="color:#444444; metalness:0.7; roughness:0.2"></a-box>
+  <a-box      position="-2.1 2.35 0.3"  width="0.05" height="1.5" depth="0.05" rotation="0 0 -40" material="color:#555555; metalness:0.6; roughness:0.3"></a-box>
+ <!----<a-box      position="-0.25 2.76 0.3" width="1.6" height="0.03" depth="0.03" rotation="0   0 0" material="color:#888888; metalness:0.5"></a-box>
+  <a-box      position="-0.25 2.76 0.3" width="1.6" height="0.03" depth="0.03" rotation="0  45 0" material="color:#888888; metalness:0.5"></a-box>
+  <a-box      position="-0.25 2.76 0.3" width="1.6" height="0.03" depth="0.03" rotation="0  90 0" material="color:#888888; metalness:0.5"></a-box>
+  <a-box      position="-0.25 2.76 0.3" width="1.6" height="0.03" depth="0.03" rotation="0 135 0" material="color:#888888; metalness:0.5"></a-box>-->
+  <a-box      position="-0.25 2.74 0.3" width="2.6" height="0.02" depth="2.20" material="color:#f8f6f0; roughness:0.6; opacity:0.97"></a-box>
+  <a-box      position="-0.25 2.72  1.4"  width="2.6"  height="0.08" depth="0.04" material="color:#ede8dc; roughness:0.6"></a-box>
+  <a-box      position="-0.25 2.72 -0.8"  width="2.6"  height="0.08" depth="0.04" material="color:#ede8dc; roughness:0.6"></a-box>
+  <a-box      position="-1.55 2.72  0.3"  width="0.04" height="0.08" depth="2.20" material="color:#ede8dc; roughness:0.6"></a-box>
+  <a-box      position=" 1.05 2.72  0.3"  width="0.04" height="0.08" depth="2.20" material="color:#ede8dc; roughness:0.6"></a-box>
+
+  <!-- PICKET FENCE -->
+  <a-box position="-3.5 0.25 -3.0" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position="-3.5 0.25 -1.5" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position="-3.5 0.25  0.0" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position="-3.5 0.25  1.5" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position="-3.5 0.38 -0.75" width="0.05" height="0.09" depth="5.0" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position=" 3.5 0.25 -3.0" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position=" 3.5 0.25 -1.5" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position=" 3.5 0.25  0.0" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position=" 3.5 0.25  1.5" width="0.06" height="0.5" depth="0.06" material="color:#f0f0f0; roughness:0.5"></a-box>
+  <a-box position=" 3.5 0.38 -0.75" width="0.05" height="0.09" depth="5.0" material="color:#f0f0f0; roughness:0.5"></a-box>
+
+
+
+
+
+
+<a-cylinder position="-5 0.8 -5"    radius="0.18" height="2.5" material="color:#795548; roughness:0.9"></a-cylinder>
+  <a-sphere   position="-5 2.8 -5"    radius="1.4"  material="color:#2e7d32; roughness:0.9"></a-sphere>
+  <a-sphere   position="-5.5 2.4 -5"  radius="1.0"  material="color:#388e3c; roughness:0.9"></a-sphere>
+  <a-sphere   position="-4.5 2.5 -5.2" radius="1.0" material="color:#1b5e20; roughness:0.9"></a-sphere>
+  <a-cylinder position=" 5 0.8 -5"    radius="0.18" height="2.5" material="color:#795548; roughness:0.9"></a-cylinder>
+  <a-sphere   position=" 5 2.8 -5"    radius="1.4"  material="color:#33691e; roughness:0.9"></a-sphere>
+  <a-sphere   position=" 5.5 2.4 -5"  radius="1.0"  material="color:#2e7d32; roughness:0.9"></a-sphere>
+  <a-sphere   position=" 4.5 2.5 -5.2" radius="1.0" material="color:#388e3c; roughness:0.9"></a-sphere>
+  <a-cylinder position="-7 0.8 0"     radius="0.15" height="2.2" material="color:#6d4c41; roughness:0.9"></a-cylinder>
+  <a-sphere   position="-7 2.5 0"     radius="1.2"  material="color:#2e7d32; roughness:0.9"></a-sphere>
+  <a-sphere   position="-7 2.2 0.5"   radius="0.9"  material="color:#43a047; roughness:0.9"></a-sphere>
+  <a-cylinder position=" 7 0.8 0"     radius="0.15" height="2.2" material="color:#6d4c41; roughness:0.9"></a-cylinder>
+  <a-sphere   position=" 7 2.5 0"     radius="1.2"  material="color:#1b5e20; roughness:0.9"></a-sphere>
+  <a-sphere   position=" 7 2.2 -0.5"  radius="0.9"  material="color:#388e3c; roughness:0.9"></a-sphere>
+
+
+
+  <!-- SHRUBS — FRONT PATH SIDES -->
+  <a-sphere position="-1.40 0.25 7.50" radius="0.34" material="color:#2e7d32; roughness:0.95"></a-sphere>
+  <a-sphere position="-1.70 0.20 7.00" radius="0.28" material="color:#388e3c; roughness:0.95"></a-sphere>
+  <a-sphere position=" 1.40 0.25 7.50" radius="0.34" material="color:#33691e; roughness:0.95"></a-sphere>
+  <a-sphere position=" 1.70 0.20 7.00" radius="0.28" material="color:#2e7d32; roughness:0.95"></a-sphere>
+  <a-sphere position="-1.50 0.22 5.50" radius="0.32" material="color:#1b5e20; roughness:0.95"></a-sphere>
+  <a-sphere position=" 1.50 0.22 5.50" radius="0.32" material="color:#388e3c; roughness:0.95"></a-sphere>
+  <a-sphere position="-1.60 0.24 3.50" radius="0.36" material="color:#2e7d32; roughness:0.95"></a-sphere>
+  <a-sphere position=" 1.60 0.24 3.50" radius="0.36" material="color:#33691e; roughness:0.95"></a-sphere>
+
+
+
+
+ 
+  <!-- FLOWERS — LEFT BED -->
+  <a-cylinder position="-2.50 0.20 -1.50" radius="0.022" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-2.50 0.42 -1.50" radius="0.085" material="color:#e91e63"></a-sphere>
+  <a-sphere   position="-2.58 0.38 -1.50" radius="0.055" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-2.42 0.38 -1.50" radius="0.055" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-2.50 0.43 -1.50" radius="0.028" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position="-2.20 0.18 -1.20" radius="0.020" height="0.36" material="color:#4a8c4a"></a-cylinder>
+  <a-sphere   position="-2.20 0.38 -1.20" radius="0.075" material="color:#ff9800"></a-sphere>
+  <a-sphere   position="-2.27 0.34 -1.20" radius="0.050" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-2.13 0.34 -1.20" radius="0.050" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-2.20 0.40 -1.20" radius="0.025" material="color:#fff176"></a-sphere>
+  <a-cylinder position="-2.80 0.22 -1.00" radius="0.020" height="0.44" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-2.80 0.45 -1.00" radius="0.085" material="color:#9c27b0"></a-sphere>
+  <a-sphere   position="-2.88 0.41 -1.00" radius="0.055" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position="-2.72 0.41 -1.00" radius="0.055" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position="-2.80 0.46 -1.00" radius="0.028" material="color:#fff59d"></a-sphere>
+  <a-cylinder position="-3.00 0.20  0.50" radius="0.022" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-3.00 0.42  0.50" radius="0.082" material="color:#f44336"></a-sphere>
+  <a-sphere   position="-3.08 0.38  0.50" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-2.92 0.38  0.50" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-3.00 0.43  0.50" radius="0.026" material="color:#ffeb3b"></a-sphere>
+  <a-cylinder position="-2.60 0.18  1.00" radius="0.020" height="0.36" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-2.60 0.37  1.00" radius="0.072" material="color:#ffeb3b"></a-sphere>
+  <a-sphere   position="-2.67 0.33  1.00" radius="0.048" material="color:#fff176"></a-sphere>
+  <a-sphere   position="-2.53 0.33  1.00" radius="0.048" material="color:#fff176"></a-sphere>
+  <a-sphere   position="-2.60 0.38  1.00" radius="0.024" material="color:#ff8f00"></a-sphere>
+  <!-- Extra left: hot pink -->
+  <a-cylinder position="-3.50 0.22 -0.80" radius="0.020" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-3.50 0.46 -0.80" radius="0.088" material="color:#e91e63"></a-sphere>
+  <a-sphere   position="-3.58 0.42 -0.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-3.42 0.42 -0.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-3.50 0.47 -0.80" radius="0.026" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position="-3.70 0.20 -0.50" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-3.70 0.42 -0.50" radius="0.078" material="color:#ec407a"></a-sphere>
+  <a-sphere   position="-3.70 0.43 -0.50" radius="0.024" material="color:#fff176"></a-sphere>
+
+
+
+  <!-- BACK HEDGE double row -->
+  <a-sphere position="-2.50 0.55 -3.00" radius="0.65" material="color:#1b5e20; roughness:0.95"></a-sphere>
+  <a-sphere position="-1.50 0.52 -3.20" radius="0.60" material="color:#2e7d32; roughness:0.95"></a-sphere>
+  <a-sphere position="-0.50 0.55 -3.30" radius="0.65" material="color:#1b5e20; roughness:0.95"></a-sphere>
+  <a-sphere position=" 0.50 0.52 -3.20" radius="0.60" material="color:#388e3c; roughness:0.95"></a-sphere>
+  <a-sphere position=" 1.50 0.55 -3.00" radius="0.65" material="color:#2e7d32; roughness:0.95"></a-sphere>
+  <a-sphere position=" 2.50 0.52 -2.90" radius="0.58" material="color:#1b5e20; roughness:0.95"></a-sphere>
+  <a-sphere position="-2.00 0.40 -2.60" radius="0.45" material="color:#33691e; roughness:0.95"></a-sphere>
+  <a-sphere position="-1.00 0.38 -2.70" radius="0.42" material="color:#2e7d32; roughness:0.95"></a-sphere>
+  <a-sphere position=" 0.00 0.40 -2.80" radius="0.45" material="color:#388e3c; roughness:0.95"></a-sphere>
+  <a-sphere position=" 1.00 0.38 -2.70" radius="0.42" material="color:#1b5e20; roughness:0.95"></a-sphere>
+  <a-sphere position=" 2.00 0.40 -2.60" radius="0.45" material="color:#2e7d32; roughness:0.95"></a-sphere>
+ <!-- Extra left: sunflower -->
+  <a-cylinder position="-3.80 0.22 -2.00" radius="0.022" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-3.80 0.46 -2.00" radius="0.090" material="color:#ff9800"></a-sphere>
+  <a-sphere   position="-3.88 0.42 -2.00" radius="0.060" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-3.72 0.42 -2.00" radius="0.060" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-3.80 0.47 -2.00" radius="0.026" material="color:#5d4037"></a-sphere>
+  <a-cylinder position="-4.00 0.20 -1.70" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-4.00 0.42 -1.70" radius="0.078" material="color:#fdd835"></a-sphere>
+  <a-sphere   position="-4.00 0.43 -1.70" radius="0.024" material="color:#6d4c41"></a-sphere>
+  <!-- Extra left: lavender -->
+  <a-cylinder position="-4.20 0.22  0.20" radius="0.018" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-4.20 0.38  0.20" radius="0.055" material="color:#9c27b0"></a-sphere>
+  <a-sphere   position="-4.20 0.44  0.20" radius="0.045" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position="-4.20 0.50  0.20" radius="0.035" material="color:#ce93d8"></a-sphere>
+  <a-sphere   position="-4.20 0.54  0.20" radius="0.022" material="color:#e1bee7"></a-sphere>
+  <a-cylinder position="-4.40 0.20  0.50" radius="0.018" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-4.40 0.36  0.50" radius="0.050" material="color:#8e24aa"></a-sphere>
+  <a-sphere   position="-4.40 0.42  0.50" radius="0.040" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position="-4.40 0.47  0.50" radius="0.030" material="color:#ce93d8"></a-sphere>
+  <!-- Extra left: red poppies -->
+  <a-cylinder position="-4.00 0.20  1.20" radius="0.020" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-4.00 0.42  1.20" radius="0.084" material="color:#f44336"></a-sphere>
+  <a-sphere   position="-4.08 0.38  1.20" radius="0.054" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-3.92 0.38  1.20" radius="0.054" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-4.00 0.43  1.20" radius="0.024" material="color:#212121"></a-sphere>
+  <!-- Extra left: white blooms -->
+  <a-cylinder position="-3.50 0.20  1.80" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-3.50 0.42  1.80" radius="0.080" material="color:#f5f5f5"></a-sphere>
+  <a-sphere   position="-3.58 0.38  1.80" radius="0.054" material="color:#eeeeee"></a-sphere>
+  <a-sphere   position="-3.42 0.38  1.80" radius="0.054" material="color:#e0e0e0"></a-sphere>
+  <a-sphere   position="-3.50 0.43  1.80" radius="0.024" material="color:#f9a825"></a-sphere>
+ 
+  <!-- FLOWERS — RIGHT BED (mirrors left) -->
+  <a-cylinder position=" 2.50 0.20 -1.50" radius="0.022" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 2.50 0.42 -1.50" radius="0.085" material="color:#e91e63"></a-sphere>
+  <a-sphere   position=" 2.58 0.38 -1.50" radius="0.055" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 2.42 0.38 -1.50" radius="0.055" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 2.50 0.43 -1.50" radius="0.028" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position=" 2.20 0.18 -1.20" radius="0.020" height="0.36" material="color:#4a8c4a"></a-cylinder>
+  <a-sphere   position=" 2.20 0.38 -1.20" radius="0.075" material="color:#ff9800"></a-sphere>
+  <a-sphere   position=" 2.27 0.34 -1.20" radius="0.050" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 2.13 0.34 -1.20" radius="0.050" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 2.20 0.40 -1.20" radius="0.025" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 2.80 0.22 -1.00" radius="0.020" height="0.44" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 2.80 0.45 -1.00" radius="0.085" material="color:#9c27b0"></a-sphere>
+  <a-sphere   position=" 2.88 0.41 -1.00" radius="0.055" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position=" 2.72 0.41 -1.00" radius="0.055" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position=" 2.80 0.46 -1.00" radius="0.028" material="color:#fff59d"></a-sphere>
+  <a-cylinder position=" 3.00 0.20  0.50" radius="0.022" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 3.00 0.42  0.50" radius="0.082" material="color:#f44336"></a-sphere>
+  <a-sphere   position=" 3.08 0.38  0.50" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position=" 2.92 0.38  0.50" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position=" 3.00 0.43  0.50" radius="0.026" material="color:#ffeb3b"></a-sphere>
+  <a-cylinder position=" 2.60 0.18  1.00" radius="0.020" height="0.36" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 2.60 0.37  1.00" radius="0.072" material="color:#ffeb3b"></a-sphere>
+  <a-sphere   position=" 2.67 0.33  1.00" radius="0.048" material="color:#fff176"></a-sphere>
+  <a-sphere   position=" 2.53 0.33  1.00" radius="0.048" material="color:#fff176"></a-sphere>
+  <a-sphere   position=" 2.60 0.38  1.00" radius="0.024" material="color:#ff8f00"></a-sphere>
+  <a-cylinder position=" 3.50 0.22 -0.80" radius="0.020" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 3.50 0.46 -0.80" radius="0.088" material="color:#e91e63"></a-sphere>
+  <a-sphere   position=" 3.58 0.42 -0.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 3.42 0.42 -0.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 3.50 0.47 -0.80" radius="0.026" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position=" 3.70 0.20 -0.50" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 3.70 0.42 -0.50" radius="0.078" material="color:#ec407a"></a-sphere>
+  <a-sphere   position=" 3.70 0.43 -0.50" radius="0.024" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 3.80 0.22 -2.00" radius="0.022" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 3.80 0.46 -2.00" radius="0.090" material="color:#ff9800"></a-sphere>
+  <a-sphere   position=" 3.88 0.42 -2.00" radius="0.060" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 3.72 0.42 -2.00" radius="0.060" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 3.80 0.47 -2.00" radius="0.026" material="color:#5d4037"></a-sphere>
+  <a-cylinder position=" 4.00 0.20 -1.70" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 4.00 0.42 -1.70" radius="0.078" material="color:#fdd835"></a-sphere>
+  <a-sphere   position=" 4.00 0.43 -1.70" radius="0.024" material="color:#6d4c41"></a-sphere>
+  <a-cylinder position=" 4.20 0.22  0.20" radius="0.018" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 4.20 0.38  0.20" radius="0.055" material="color:#9c27b0"></a-sphere>
+  <a-sphere   position=" 4.20 0.44  0.20" radius="0.045" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position=" 4.20 0.50  0.20" radius="0.035" material="color:#ce93d8"></a-sphere>
+  <a-sphere   position=" 4.20 0.54  0.20" radius="0.022" material="color:#e1bee7"></a-sphere>
+  <a-cylinder position=" 4.00 0.20  1.20" radius="0.020" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 4.00 0.42  1.20" radius="0.084" material="color:#f44336"></a-sphere>
+  <a-sphere   position=" 4.08 0.38  1.20" radius="0.054" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position=" 3.92 0.38  1.20" radius="0.054" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position=" 4.00 0.43  1.20" radius="0.024" material="color:#212121"></a-sphere>
+  <a-cylinder position=" 3.50 0.20  1.80" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 3.50 0.42  1.80" radius="0.080" material="color:#f5f5f5"></a-sphere>
+  <a-sphere   position=" 3.58 0.38  1.80" radius="0.054" material="color:#eeeeee"></a-sphere>
+  <a-sphere   position=" 3.42 0.38  1.80" radius="0.054" material="color:#e0e0e0"></a-sphere>
+  <a-sphere   position=" 3.50 0.43  1.80" radius="0.024" material="color:#f9a825"></a-sphere>
+ <!-- FLOWERS — PATH BORDER LEFT -->
+  <a-cylinder position="-0.70 0.15 7.50" radius="0.018" height="0.30" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-0.70 0.32 7.50" radius="0.060" material="color:#ff4081"></a-sphere>
+  <a-sphere   position="-0.70 0.33 7.50" radius="0.020" material="color:#ffe082"></a-sphere>
+  <a-cylinder position="-0.75 0.14 6.00" radius="0.018" height="0.28" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-0.75 0.30 6.00" radius="0.055" material="color:#7c4dff"></a-sphere>
+  <a-sphere   position="-0.75 0.31 6.00" radius="0.018" material="color:#fff176"></a-sphere>
+  <a-cylinder position="-0.72 0.15 4.50" radius="0.018" height="0.30" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-0.72 0.32 4.50" radius="0.060" material="color:#ff6d00"></a-sphere>
+  <a-sphere   position="-0.72 0.33 4.50" radius="0.020" material="color:#fff9c4"></a-sphere>
+  <a-cylinder position="-0.70 0.14 3.00" radius="0.016" height="0.28" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-0.70 0.30 3.00" radius="0.055" material="color:#e91e63"></a-sphere>
+  <a-sphere   position="-0.70 0.31 3.00" radius="0.018" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position="-1.20 0.18 8.50" radius="0.018" height="0.36" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-1.20 0.38 8.50" radius="0.065" material="color:#00acc1"></a-sphere>
+  <a-sphere   position="-1.20 0.39 8.50" radius="0.020" material="color:#fff9c4"></a-sphere>
+  <a-cylinder position="-1.10 0.18 6.50" radius="0.018" height="0.36" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-1.10 0.38 6.50" radius="0.065" material="color:#ffb300"></a-sphere>
+  <a-sphere   position="-1.10 0.39 6.50" radius="0.020" material="color:#5d4037"></a-sphere>
+  <a-cylinder position="-1.15 0.18 4.80" radius="0.018" height="0.36" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-1.15 0.38 4.80" radius="0.065" material="color:#ef5350"></a-sphere>
+  <a-sphere   position="-1.15 0.39 4.80" radius="0.020" material="color:#ffe082"></a-sphere>
+  <a-cylinder position="-2.50 0.72 -2.62" radius="0.022" height="0.36" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-2.50 0.96 -2.62" radius="0.085" material="color:#e91e63"></a-sphere>
+  <a-sphere   position="-2.58 0.92 -2.62" radius="0.055" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-2.42 0.92 -2.62" radius="0.055" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-2.50 0.97 -2.62" radius="0.026" material="color:#ffd54f"></a-sphere>
+ 
+  <a-cylinder position="-1.50 0.70 -2.82" radius="0.022" height="0.36" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-1.50 0.94 -2.82" radius="0.082" material="color:#ff4081"></a-sphere>
+  <a-sphere   position="-1.58 0.90 -2.82" radius="0.052" material="color:#ff80ab"></a-sphere>
+  <a-sphere   position="-1.42 0.90 -2.82" radius="0.052" material="color:#ff80ab"></a-sphere>
+  <a-sphere   position="-1.50 0.95 -2.82" radius="0.024" material="color:#fff176"></a-sphere>
+ 
+  <!-- Orange / yellow sunflowers -->
+  <a-cylinder position="-0.50 0.72 -2.92" radius="0.024" height="0.38" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-0.50 0.98 -2.92" radius="0.090" material="color:#ff9800"></a-sphere>
+  <a-sphere   position="-0.60 0.93 -2.92" radius="0.058" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-0.40 0.93 -2.92" radius="0.058" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-0.50 0.99 -2.92" radius="0.028" material="color:#5d4037"></a-sphere>
+ 
+  <a-cylinder position=" 0.50 0.70 -2.82" radius="0.024" height="0.36" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 0.50 0.94 -2.82" radius="0.088" material="color:#fdd835"></a-sphere>
+  <a-sphere   position=" 0.58 0.90 -2.82" radius="0.056" material="color:#fff176"></a-sphere>
+  <a-sphere   position=" 0.42 0.90 -2.82" radius="0.056" material="color:#fff176"></a-sphere>
+  <a-sphere   position=" 0.50 0.95 -2.82" radius="0.026" material="color:#6d4c41"></a-sphere>
+ 
+  <!-- Purple lavender spikes -->
+  <a-cylinder position=" 1.50 0.72 -2.62" radius="0.018" height="0.38" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 1.50 0.82 -2.62" radius="0.050" material="color:#9c27b0"></a-sphere>
+  <a-sphere   position=" 1.50 0.89 -2.62" radius="0.042" material="color:#ba68c8"></a-sphere>
+  <a-sphere   position=" 1.50 0.95 -2.62" radius="0.034" material="color:#ce93d8"></a-sphere>
+  <a-sphere   position=" 1.50 1.00 -2.62" radius="0.024" material="color:#e1bee7"></a-sphere>
+ 
+  <a-cylinder position=" 2.50 0.70 -2.52" radius="0.018" height="0.38" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 2.50 0.80 -2.52" radius="0.050" material="color:#7b1fa2"></a-sphere>
+  <a-sphere   position=" 2.50 0.87 -2.52" radius="0.040" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position=" 2.50 0.93 -2.52" radius="0.032" material="color:#ce93d8"></a-sphere>
+  <a-sphere   position=" 2.50 0.98 -2.52" radius="0.022" material="color:#e1bee7"></a-sphere>
+ 
+  <!-- Red poppies -->
+  <a-cylinder position="-2.00 0.68 -2.72" radius="0.020" height="0.34" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-2.00 0.90 -2.72" radius="0.082" material="color:#f44336"></a-sphere>
+  <a-sphere   position="-2.08 0.86 -2.72" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-1.92 0.86 -2.72" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-2.00 0.91 -2.72" radius="0.022" material="color:#212121"></a-sphere>
+ 
+  <a-cylinder position=" 2.00 0.68 -2.72" radius="0.020" height="0.34" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 2.00 0.90 -2.72" radius="0.082" material="color:#ef5350"></a-sphere>
+  <a-sphere   position=" 2.08 0.86 -2.72" radius="0.052" material="color:#ffcdd2"></a-sphere>
+  <a-sphere   position=" 1.92 0.86 -2.72" radius="0.052" material="color:#ffcdd2"></a-sphere>
+  <a-sphere   position=" 2.00 0.91 -2.72" radius="0.022" material="color:#212121"></a-sphere>
+ 
+  <!-- White blooms -->
+  <a-cylinder position="-1.00 0.68 -2.78" radius="0.020" height="0.34" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-1.00 0.90 -2.78" radius="0.080" material="color:#f5f5f5"></a-sphere>
+  <a-sphere   position="-1.08 0.86 -2.78" radius="0.052" material="color:#eeeeee"></a-sphere>
+  <a-sphere   position="-0.92 0.86 -2.78" radius="0.052" material="color:#e0e0e0"></a-sphere>
+  <a-sphere   position="-1.00 0.91 -2.78" radius="0.022" material="color:#f9a825"></a-sphere>
+ 
+  <a-cylinder position=" 1.00 0.68 -2.78" radius="0.020" height="0.34" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 1.00 0.90 -2.78" radius="0.080" material="color:#fafafa"></a-sphere>
+  <a-sphere   position=" 1.08 0.86 -2.78" radius="0.052" material="color:#eeeeee"></a-sphere>
+  <a-sphere   position=" 0.92 0.86 -2.78" radius="0.052" material="color:#e0e0e0"></a-sphere>
+  <a-sphere   position=" 1.00 0.91 -2.78" radius="0.022" material="color:#ffca28"></a-sphere>
+ 
+  <!-- Teal / cyan accent blooms -->
+  <a-cylinder position="-3.00 0.70 -2.42" radius="0.020" height="0.36" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-3.00 0.94 -2.42" radius="0.082" material="color:#00acc1"></a-sphere>
+  <a-sphere   position="-3.08 0.90 -2.42" radius="0.052" material="color:#4dd0e1"></a-sphere>
+  <a-sphere   position="-2.92 0.90 -2.42" radius="0.052" material="color:#4dd0e1"></a-sphere>
+  <a-sphere   position="-3.00 0.95 -2.42" radius="0.024" material="color:#fff9c4"></a-sphere>
+ 
+  <a-cylinder position=" 3.00 0.70 -2.42" radius="0.020" height="0.36" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 3.00 0.94 -2.42" radius="0.082" material="color:#26c6da"></a-sphere>
+  <a-sphere   position=" 3.08 0.90 -2.42" radius="0.052" material="color:#80deea"></a-sphere>
+  <a-sphere   position=" 2.92 0.90 -2.42" radius="0.052" material="color:#80deea"></a-sphere>
+  <a-sphere   position=" 3.00 0.95 -2.42" radius="0.024" material="color:#fff176"></a-sphere>
+ 
+  <!-- Extra back-hedge flowers filling gaps -->
+  <a-cylinder position="-0.00 0.70 -3.15" radius="0.020" height="0.32" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-0.00 0.90 -3.15" radius="0.075" material="color:#e040fb"></a-sphere>
+  <a-sphere   position="-0.00 0.91 -3.15" radius="0.024" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position="-1.50 0.72 -3.10" radius="0.020" height="0.30" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-1.50 0.90 -3.10" radius="0.075" material="color:#ff6f00"></a-sphere>
+  <a-sphere   position="-1.50 0.91 -3.10" radius="0.022" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 1.50 0.72 -3.10" radius="0.020" height="0.30" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 1.50 0.90 -3.10" radius="0.075" material="color:#ec407a"></a-sphere>
+  <a-sphere   position=" 1.50 0.91 -3.10" radius="0.022" material="color:#ffe082"></a-sphere>
+  <a-cylinder position=" 0.00 0.68 -2.55" radius="0.018" height="0.28" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 0.00 0.84 -2.55" radius="0.068" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position=" 0.00 0.85 -2.55" radius="0.020" material="color:#fff9c4"></a-sphere>
+
+
+
+
+
+
+
+
+  <!-- FLOWERS — PATH BORDER RIGHT -->
+  <a-cylinder position=" 0.70 0.15 7.50" radius="0.018" height="0.30" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 0.70 0.32 7.50" radius="0.060" material="color:#00bcd4"></a-sphere>
+  <a-sphere   position=" 0.70 0.33 7.50" radius="0.020" material="color:#fff9c4"></a-sphere>
+  <a-cylinder position=" 0.75 0.14 6.00" radius="0.018" height="0.28" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 0.75 0.30 6.00" radius="0.055" material="color:#ff5722"></a-sphere>
+  <a-sphere   position=" 0.75 0.31 6.00" radius="0.018" material="color:#ffe082"></a-sphere>
+  <a-cylinder position=" 0.72 0.15 4.50" radius="0.018" height="0.30" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 0.72 0.32 4.50" radius="0.060" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position=" 0.72 0.33 4.50" radius="0.020" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 0.70 0.14 3.00" radius="0.016" height="0.28" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 0.70 0.30 3.00" radius="0.055" material="color:#26c6da"></a-sphere>
+  <a-sphere   position=" 0.70 0.31 3.00" radius="0.018" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position=" 1.20 0.18 8.50" radius="0.018" height="0.36" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 1.20 0.38 8.50" radius="0.065" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 1.20 0.39 8.50" radius="0.020" material="color:#fff9c4"></a-sphere>
+  <a-cylinder position=" 1.10 0.18 6.50" radius="0.018" height="0.36" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 1.10 0.38 6.50" radius="0.065" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position=" 1.10 0.39 6.50" radius="0.020" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 1.15 0.18 4.80" radius="0.018" height="0.36" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 1.15 0.38 4.80" radius="0.065" material="color:#26c6da"></a-sphere>
+  <a-sphere   position=" 1.15 0.39 4.80" radius="0.020" material="color:#fff9c4"></a-sphere>
+ 
+ 
+  <!-- FLOWERS — BACK BED -->
+  <a-cylinder position="-1.50 0.20 -2.80" radius="0.025" height="0.40" material="color:#3a7d3a"></a-cylinder>
+  <a-sphere   position="-1.50 0.42 -2.80" radius="0.080" material="color:#e040fb"></a-sphere>
+  <a-sphere   position="-1.50 0.43 -2.80" radius="0.028" material="color:#ffe082"></a-sphere>
+  <a-cylinder position=" 0.00 0.20 -2.80" radius="0.025" height="0.40" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 0.00 0.42 -2.80" radius="0.080" material="color:#ef5350"></a-sphere>
+  <a-sphere   position=" 0.00 0.43 -2.80" radius="0.028" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 1.50 0.20 -2.80" radius="0.025" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 1.50 0.42 -2.80" radius="0.080" material="color:#26a69a"></a-sphere>
+  <a-sphere   position=" 1.50 0.43 -2.80" radius="0.028" material="color:#fff9c4"></a-sphere>
+  <a-cylinder position="-3.00 0.22 -2.20" radius="0.020" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-3.00 0.46 -2.20" radius="0.085" material="color:#7b1fa2"></a-sphere>
+  <a-sphere   position="-3.08 0.42 -2.20" radius="0.055" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position="-2.92 0.42 -2.20" radius="0.055" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position="-3.00 0.47 -2.20" radius="0.025" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 3.00 0.22 -2.20" radius="0.020" height="0.44" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 3.00 0.46 -2.20" radius="0.085" material="color:#ff6f00"></a-sphere>
+  <a-sphere   position=" 3.08 0.42 -2.20" radius="0.055" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 2.92 0.42 -2.20" radius="0.055" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 3.00 0.47 -2.20" radius="0.025" material="color:#4e342e"></a-sphere>  <!-- EXTRA SIDE BED FLOWERS — LEFT (pushing further out x=-4.5 to -5.5) -->
+  <!-- Hot pink cluster far left -->
+  <a-cylinder position="-4.80 0.22 -1.80" radius="0.022" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-4.80 0.46 -1.80" radius="0.088" material="color:#e91e63"></a-sphere>
+  <a-sphere   position="-4.88 0.42 -1.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-4.72 0.42 -1.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position="-4.80 0.47 -1.80" radius="0.026" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position="-5.10 0.20 -1.20" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-5.10 0.42 -1.20" radius="0.080" material="color:#ff4081"></a-sphere>
+  <a-sphere   position="-5.10 0.43 -1.20" radius="0.024" material="color:#fff176"></a-sphere>
+  <!-- Orange sunflower -->
+  <a-cylinder position="-5.00 0.22  0.80" radius="0.024" height="0.44" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-5.00 0.46  0.80" radius="0.090" material="color:#ff9800"></a-sphere>
+  <a-sphere   position="-5.08 0.42  0.80" radius="0.058" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-4.92 0.42  0.80" radius="0.058" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position="-5.00 0.47  0.80" radius="0.028" material="color:#5d4037"></a-sphere>
+  <!-- Yellow lemon -->
+  <a-cylinder position="-5.30 0.20  0.20" radius="0.020" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-5.30 0.42  0.20" radius="0.080" material="color:#fdd835"></a-sphere>
+  <a-sphere   position="-5.30 0.43  0.20" radius="0.024" material="color:#6d4c41"></a-sphere>
+  <!-- Purple -->
+  <a-cylinder position="-4.90 0.22  1.50" radius="0.018" height="0.44" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position="-4.90 0.38  1.50" radius="0.055" material="color:#7b1fa2"></a-sphere>
+  <a-sphere   position="-4.90 0.44  1.50" radius="0.045" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position="-4.90 0.50  1.50" radius="0.035" material="color:#ce93d8"></a-sphere>
+  <a-sphere   position="-4.90 0.54  1.50" radius="0.022" material="color:#e1bee7"></a-sphere>
+  <!-- White blooms -->
+  <a-cylinder position="-5.20 0.20  1.20" radius="0.020" height="0.40" material="color:#43a047"></a-cylinder>
+  <a-sphere   position="-5.20 0.42  1.20" radius="0.080" material="color:#f5f5f5"></a-sphere>
+  <a-sphere   position="-5.28 0.38  1.20" radius="0.052" material="color:#eeeeee"></a-sphere>
+  <a-sphere   position="-5.12 0.38  1.20" radius="0.052" material="color:#e0e0e0"></a-sphere>
+  <a-sphere   position="-5.20 0.43  1.20" radius="0.022" material="color:#f9a825"></a-sphere>
+  <!-- Red poppies far left -->
+  <a-cylinder position="-4.70 0.20 -0.90" radius="0.020" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position="-4.70 0.42 -0.90" radius="0.082" material="color:#f44336"></a-sphere>
+  <a-sphere   position="-4.78 0.38 -0.90" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-4.62 0.38 -0.90" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position="-4.70 0.43 -0.90" radius="0.022" material="color:#212121"></a-sphere>
+ 
+  <!-- EXTRA SIDE BED FLOWERS — RIGHT (mirroring left additions) -->
+  <a-cylinder position=" 4.80 0.22 -1.80" radius="0.022" height="0.44" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 4.80 0.46 -1.80" radius="0.088" material="color:#e91e63"></a-sphere>
+  <a-sphere   position=" 4.88 0.42 -1.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 4.72 0.42 -1.80" radius="0.058" material="color:#f06292"></a-sphere>
+  <a-sphere   position=" 4.80 0.47 -1.80" radius="0.026" material="color:#ffd54f"></a-sphere>
+  <a-cylinder position=" 5.10 0.20 -1.20" radius="0.020" height="0.40" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 5.10 0.42 -1.20" radius="0.080" material="color:#ff4081"></a-sphere>
+  <a-sphere   position=" 5.10 0.43 -1.20" radius="0.024" material="color:#fff176"></a-sphere>
+  <a-cylinder position=" 5.00 0.22  0.80" radius="0.024" height="0.44" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 5.00 0.46  0.80" radius="0.090" material="color:#ff9800"></a-sphere>
+  <a-sphere   position=" 5.08 0.42  0.80" radius="0.058" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 4.92 0.42  0.80" radius="0.058" material="color:#ffb74d"></a-sphere>
+  <a-sphere   position=" 5.00 0.47  0.80" radius="0.028" material="color:#5d4037"></a-sphere>
+  <a-cylinder position=" 5.30 0.20  0.20" radius="0.020" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 5.30 0.42  0.20" radius="0.080" material="color:#fdd835"></a-sphere>
+  <a-sphere   position=" 5.30 0.43  0.20" radius="0.024" material="color:#6d4c41"></a-sphere>
+  <a-cylinder position=" 4.90 0.22  1.50" radius="0.018" height="0.44" material="color:#2e7d32"></a-cylinder>
+  <a-sphere   position=" 4.90 0.38  1.50" radius="0.055" material="color:#7b1fa2"></a-sphere>
+  <a-sphere   position=" 4.90 0.44  1.50" radius="0.045" material="color:#ab47bc"></a-sphere>
+  <a-sphere   position=" 4.90 0.50  1.50" radius="0.035" material="color:#ce93d8"></a-sphere>
+  <a-sphere   position=" 4.90 0.54  1.50" radius="0.022" material="color:#e1bee7"></a-sphere>
+  <a-cylinder position=" 5.20 0.20  1.20" radius="0.020" height="0.40" material="color:#43a047"></a-cylinder>
+  <a-sphere   position=" 5.20 0.42  1.20" radius="0.080" material="color:#f5f5f5"></a-sphere>
+  <a-sphere   position=" 5.28 0.38  1.20" radius="0.052" material="color:#eeeeee"></a-sphere>
+  <a-sphere   position=" 5.12 0.38  1.20" radius="0.052" material="color:#e0e0e0"></a-sphere>
+  <a-sphere   position=" 5.20 0.43  1.20" radius="0.022" material="color:#f9a825"></a-sphere>
+  <a-cylinder position=" 4.70 0.20 -0.90" radius="0.020" height="0.40" material="color:#388e3c"></a-cylinder>
+  <a-sphere   position=" 4.70 0.42 -0.90" radius="0.082" material="color:#f44336"></a-sphere>
+  <a-sphere   position=" 4.78 0.38 -0.90" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position=" 4.62 0.38 -0.90" radius="0.052" material="color:#ef9a9a"></a-sphere>
+  <a-sphere   position=" 4.70 0.43 -0.90" radius="0.022" material="color:#212121"></a-sphere>
+
+
+
+
+
+  <!-- ANIMATED BUTTERFLIES -->
+  <a-entity position="1.5 1.2 -0.5" animation="property: position; to: 2.5 1.6 -1.2; dur: 3000; dir: alternate; loop: true; easing: easeInOutSine">
+    <a-box width="0.13" height="0.09" depth="0.01" material="color:#ff80ab; opacity:0.85; side:double" rotation="0 30 15" animation="property: rotation; from: 0 30 15; to: 0 30 25; dur: 400; dir: alternate; loop: true"></a-box>
+    <a-box position="0.07 0 0" width="0.13" height="0.09" depth="0.01" material="color:#ff4081; opacity:0.85; side:double" rotation="0 30 -15" animation="property: rotation; from: 0 30 -15; to: 0 30 -25; dur: 400; dir: alternate; loop: true"></a-box>
+  </a-entity>
+  <a-entity position="-1.8 1.0 0.5" animation="property: position; to: -2.8 1.4 -0.3; dur: 3500; dir: alternate; loop: true; easing: easeInOutSine">
+    <a-box width="0.11" height="0.08" depth="0.01" material="color:#40c4ff; opacity:0.85; side:double" rotation="0 -20 12" animation="property: rotation; from: 0 -20 12; to: 0 -20 22; dur: 350; dir: alternate; loop: true"></a-box>
+    <a-box position="0.06 0 0" width="0.11" height="0.08" depth="0.01" material="color:#0091ea; opacity:0.85; side:double" rotation="0 -20 -12" animation="property: rotation; from: 0 -20 -12; to: 0 -20 -22; dur: 350; dir: alternate; loop: true"></a-box>
+  </a-entity>
+  <a-entity position="0.5 1.4 -1.5" animation="property: position; to: -0.8 1.8 -2.2; dur: 4000; dir: alternate; loop: true; easing: easeInOutSine">
+    <a-box width="0.10" height="0.07" depth="0.01" material="color:#ce93d8; opacity:0.85; side:double" rotation="0 10 14" animation="property: rotation; from: 0 10 14; to: 0 10 24; dur: 380; dir: alternate; loop: true"></a-box>
+    <a-box position="0.055 0 0" width="0.10" height="0.07" depth="0.01" material="color:#ab47bc; opacity:0.85; side:double" rotation="0 10 -14" animation="property: rotation; from: 0 10 -14; to: 0 10 -24; dur: 380; dir: alternate; loop: true"></a-box>
+  </a-entity>
+
+  
+
+  <!-- CAMERA -->
+  <a-entity id="rig" position="0 1.55 4.5">
+    <a-camera id="cam" look-controls="pointerLockEnabled: false" wasd-controls="acceleration: 25">
+      <a-cursor id="cursor" raycaster="objects: .clickable" fuse="false"
+        material="opacity: 0; transparent: true"
+        geometry="primitive: ring; radiusInner: 0.005; radiusOuter: 0.008">
+      </a-cursor>
+    </a-camera>
+  </a-entity>
+
+</a-scene>
+
+<script>
+  const tooltip = document.getElementById('tooltip');
+  let ttTimer = null;
+  function showTooltip(msg) {
+    tooltip.textContent = msg;
+    tooltip.classList.add('show');
+    clearTimeout(ttTimer);
+    ttTimer = setTimeout(() => tooltip.classList.remove('show'), 3500);
+  }
+  document.querySelectorAll('.clickable').forEach(el => {
+    el.addEventListener('click', () => showTooltip(el.dataset.info));
+  });
+
+  /* Mobile joystick */
+  const jBase  = document.getElementById('joystick-base');
+  const jKnob  = document.getElementById('joystick-knob');
+  let jActive = false, jOrigin = {x:0,y:0}, jDelta = {x:0,y:0};
+  const JR = 33;
+  jBase.addEventListener('touchstart', e => {
+    e.preventDefault(); jActive = true;
+    const r = jBase.getBoundingClientRect();
+    jOrigin = { x: r.left + r.width/2, y: r.top + r.height/2 };
+  }, {passive: false});
+  document.addEventListener('touchmove', e => {
+    if (!jActive) return; e.preventDefault();
+    const t = e.touches[0];
+    let dx = t.clientX - jOrigin.x, dy = t.clientY - jOrigin.y;
+    const d = Math.min(Math.hypot(dx, dy), JR), a = Math.atan2(dy, dx);
+    dx = Math.cos(a)*d; dy = Math.sin(a)*d;
+    jKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    jDelta = { x: dx/JR, y: dy/JR };
+  }, {passive: false});
+  document.addEventListener('touchend', () => {
+    jActive = false; jDelta = {x:0,y:0};
+    jKnob.style.transform = 'translate(-50%,-50%)';
+  });
+  setInterval(() => {
+    if (!jActive || (!jDelta.x && !jDelta.y)) return;
+    const rig = document.getElementById('rig');
+    const cam = document.getElementById('cam');
+    const pos = rig.object3D.position;
+    const yaw = cam.object3D.rotation.y;
+    const s   = 0.06;
+    pos.x += (Math.cos(yaw)*-jDelta.x - Math.sin(yaw)*jDelta.y)*s;
+    pos.z += (Math.sin(yaw)*-jDelta.x + Math.cos(yaw)*jDelta.y)*s;
+  }, 1000/60);
+</script>
+</body>
+</html>
